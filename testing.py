@@ -1,5 +1,14 @@
 from main import *
 
+# keywords in test data
+# x-index           keyword
+# 0
+# 1                 zalm (in abstract)
+# 2                 help (in type)
+# 3                 life (in type)
+# 4                 help me (in type)
+# 7                 ZALM + evi (in abstract)
+
 
 test_queries = ['(abstract:zalm AND (abstract:evi OR (NOT type:help)))',
                 '((abstract:evi OR (NOT type:help)) AND abstract:zalm)',
