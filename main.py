@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import spacy
 import re
@@ -86,7 +87,7 @@ def parse_query(raw_query):
 
     return parsed_query
 
-def normalize_text(text_vector, language_model):
+def normalize_text(text_vector, nlp):
     """This function normalizes a vector of documents using the Spacy package.
     In particular: it replaces all non-alphanumeric characters with spaces
     before stripping whitespace from the edges of each document and setting
@@ -95,7 +96,6 @@ def normalize_text(text_vector, language_model):
     objects see:
     https://spacy.io/usage/models
     """
-    nlp = language_model
 
     normed_text_vector = []
     for document in text_vector:
@@ -106,7 +106,7 @@ def normalize_text(text_vector, language_model):
     return normed_text_vector
 
 
-def get_vocabulary(query, language_model):
+def get_vocabulary(query, nlp):
     """This function extracts the search terms (leaf nodes) from the parsed
     query, and constructs the vocabulary for the text vectorizer object by
     applying text normalization to them.
@@ -114,7 +114,7 @@ def get_vocabulary(query, language_model):
     def _getleafnodes(query):
         terms = []
         if query.isLeaf():
-            return terms + [query.getRootVal()]
+            return terms + [query.key]
         elif query.leftChild and not query.rightChild:
             return terms + _getleafnodes(query.getLeftChild())
         elif query.rightChild and not query.leftChild:
@@ -133,10 +133,11 @@ def get_vocabulary(query, language_model):
             if char == ':':
                 column_key = True
                 split_index = j
+                break
         if column_key:
             terms[i] = term[split_index:]
 
-    normed_terms = normalize_text(terms, language_model)
+    normed_terms = normalize_text(terms, nlp)
 
     # remove duplicates.
     vocabulary = list(set(normed_terms))
@@ -151,12 +152,14 @@ def get_vectorizer(vocabulary):
     # find the n-gram range of the vocabulary.
     min_n = min([len(term.split()) for term in vocabulary])
     max_n = max([len(term.split()) for term in vocabulary])
-
-    return CountVectorizer(vocabulary=vocabulary,
+    vectorizer = CountVectorizer(vocabulary=vocabulary,
                            ngram_range=(min_n, max_n),
                            binary=True)
+    # get vocabulary_ attribute
+    vectorizer.get_feature_names_out()
+    return vectorizer
 
-def vectorize_data(data, vectorizer):
+def vectorize_data(data, vectorizer, nlp):
     """This function takes tabular data in the form of a Pandas Dataframe,
      as well as a sklearn text-vectorization object-- and returns a dictionary
      containing columnname -> vectorizedtextdata key/value pairs. Since the
@@ -167,37 +170,95 @@ def vectorize_data(data, vectorizer):
     vectorized_data = {}
     for col in data.columns:
         column_data = data[col].apply(str)
-        normed_data = normalize_text(column_data, language_model)
+        normed_data = normalize_text(column_data, nlp)
         vectorized_data[col] = vectorizer.transform(normed_data)
 
     return vectorized_data
 
-def select_subset():
+def select_subset(vec_data, query, legend, nlp):
+    """This recursive function takes vectorized data and a parsed query as
+     input, and returns a boolean array that indexes the original data s.t.
+     the True values refer to entries that conform to the searched query.
+     It does this through boolean operations between Pandas Series while
+     traversing the tree-structured query.
+     The additionally required argument 'legend' should be a dictionary which
+     maps the vocabulary to feature indices--
+     (this is generally the vocabulary_ attribute of the CountVectorizer object
+     obtained from get_vectorizer()).
+     """
+    if query.isLeaf(): # we found a search term.
+        term = query.key.strip()
 
+        # get column key. (e.g 'abstract' in 'abstract:Mozambique')
+        column_key = False
+        for i, char in enumerate(term):
+            if char == ':':
+                split_index = i
+                column_key = term[:split_index]
+                break
 
-    selection = None # is boolean array
-    return selection
-    pass
+        if column_key:
+            if column_key not in vec_data.keys():
+                raise ValueError(f'Query contains invalid column key. '
+                                 f'Column key: {column_key}')
 
-def save_subset(data, selection):
-    pass
+            term = term[split_index+1:]
+            term_index = legend[normalize_text([term],nlp)[0]]
+            # get column data.
+            column_data = vec_data[column_key].toarray()
+            return column_data[:,term_index].astype(bool)
+        else:   # search term can be in any column.
+            term_index = legend[normalize_text([term],nlp)[0]]
+            # OR operation between all columns.
+                # get nr of entries in the data
+            N = list(vec_data.values())[0].shape[0]
+            accumulator = np.zeros(N).astype(bool)
+            for column_key in vec_data.keys():
+                # get column data.
+                column_data = vec_data[column_key].toarray()
+                accumulator = (accumulator
+                                | column_data[:,term_index].astype(bool))
+            return accumulator
+    elif query.key == 'AND':
+        return (select_subset(vec_data, query.getLeftChild(), legend, nlp)
+                    & select_subset(vec_data, query.getRightChild(), legend, nlp))
+    elif query.key == 'OR':
+        return (select_subset(vec_data, query.getLeftChild(), legend, nlp)
+                    | select_subset(vec_data, query.getRightChild(), legend, nlp))
+    elif query.key == 'NOT':
+        return ~ (select_subset(vec_data, query.getLeftChild(), legend, nlp))
+    else:
+        raise ValueError('Query was not parsed correctly.')
 
 if __name__ == '__main__':
     # Dutch language model (has to be installed separately on CLI, see line 7)
     language_model = spacy.load('nl_core_news_sm')
 
+    filepath = input('what is the filepath to your dataset? (e.g data.csv)\n'
+                     'The script handles csv or excel files.\n')
+    raw_query = input('What is your query?\n')
+
+    # load data
     data = load_data('test_data.csv', columns=['type','title','abstract'])
 
-    test_queries = ['(abstract:zalm AND (abstract:evi OR (NOT type:help)))',
-                    '((abstract:evi OR (NOT type:help)) AND abstract:zalm)',
-                    '(abstract:zalm pasta AND (abstract:evi OR (NOT type:help me)))',
-                    '(abstract:zalm pasta AND (evi OR (NOT type:do not help me)))',
-                    'abstract:zalm pasta',
-                    '(abstract:evi AND type:help)',
-                    '(abstract:42222*& OR type:life)'
-                    ]
-    test_trees = [parse_query(x) for x in test_queries]
-    test_vocabs = [get_vocabulary(x, language_model) for x in test_trees]
-    test_vects = [get_vectorizer(x) for x in test_vocabs]
-    tested_data = vectorize_data(data, test_vects[0])
-    print(tested_data)
+    # parse the query
+    parsed_query = parse_query(raw_query)
+
+    # construct the text vectorizer
+    vocabulary = get_vocabulary(parsed_query, language_model)
+    vectorizer = get_vectorizer(vocabulary)
+    feature_legend = vectorizer.vocabulary_
+
+    # vectorize the data according to the restricted vocabulary
+    searched_data = vectorize_data(data, vectorizer, language_model)
+
+    selection = select_subset(searched_data,
+                              parsed_query,
+                              feature_legend,
+                              language_model)
+
+    # select and save pruned dataset
+    data_subset = data.iloc[selection]
+
+    # TODO: THIS DOESNT WORK WELL RIGHT NOW
+    data_subset.to_csv('data_subset.csv')
