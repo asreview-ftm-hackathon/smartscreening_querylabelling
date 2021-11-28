@@ -16,11 +16,14 @@ test_queries = ['(abstract:zalm AND (abstract:evi OR (NOT type:help)))',
                 '((abstract:evi OR (NOT type:help)) AND abstract:zalm)',
                 '(abstract:zalm pasta AND (abstract:evi OR (NOT type:help me)))',
                 '(abstract:zalm pasta AND (evi OR (NOT type:do not help me)))',
-                '(abstract:zalm pasta)', # EVI AAN MATTHEW: eigenlijk is dit logischer zonder haakjes aangezien er geen "operation" is. Bij de rest is count (, ), en (AND, OR, of NOT) the same # dat is ook waarom de tree raar deed
+                'abstract:zalm pasta',
                 '(abstract:evi AND type:help)',
                 '(abstract:42222*& OR type:life)'
                 ]
 
+test_trees = [parse_query(x) for x in test_queries]
+test_vocabs = [get_vocabulary(x) for x in test_trees]
+test_vects = [get_vectorizer(x) for x in test_vocabs]
 
 def test(query):
     pt = buildParseTree(query)
