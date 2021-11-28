@@ -6,15 +6,18 @@ from pythonds.basic import Stack
 from pythonds.trees import BinaryTree
 # paste in CLI:      python -m spacy download nl_core_news_sm
 
-def load_data(filepath):
-    """This basic function loads csv/excel data into a Pandas dataframe."""
+def load_data(filepath, columns=['title','abstract']):
+    """This basic function loads specified columns of csv/excel data into a
+    Pandas dataframe.
+    """
 
     file_type = filepath.split('.')[-1]
     if file_type == 'csv':
         return pd.read_csv(filepath, delimiter=';',
-                                     encoding='utf-8')
+                                     encoding='utf-8',
+                                     usecols=columns)
     elif file_type == 'xlsx':
-        return pd.read_excel(filepath)
+        return pd.read_excel(filepath, usecols=columns)
     else:
         raise ValueError('Filetype not supported.')
 
@@ -83,17 +86,16 @@ def parse_query(raw_query):
 
     return parsed_query
 
-def normalize_text(text_vector):
+def normalize_text(text_vector, language_model):
     """This function normalizes a vector of documents using the Spacy package.
     In particular: it replaces all non-alphanumeric characters with spaces
     before stripping whitespace from the edges of each document and setting
     everything to lowercase. It then uses a Spacy language object to lemmatize
-    each dutch word in each document. This object has to be installed
-    separately using 'python -m spacy download nl_core_news_sm' in the CLI.
-    For more information on these language objects see:
+    each dutch word in each document. For more information on these language
+    objects see:
     https://spacy.io/usage/models
     """
-    nlp = spacy.load('nl_core_news_sm')
+    nlp = language_model
 
     normed_text_vector = []
     for document in text_vector:
@@ -104,7 +106,7 @@ def normalize_text(text_vector):
     return normed_text_vector
 
 
-def get_vocabulary(query):
+def get_vocabulary(query, language_model):
     """ This function extracts the leaf nodes from the search query into
     ...........""" # TODO document
     def _getleafnodes(query):
@@ -132,7 +134,7 @@ def get_vocabulary(query):
         if column_key:
             terms[i] = term[split_index:]
 
-    normed_terms = normalize_text(terms)
+    normed_terms = normalize_text(terms, language_model)
 
     # remove duplicates.
     vocabulary = list(set(normed_terms))
@@ -162,8 +164,8 @@ def vectorize_data(data, vectorizer):
      """
     vectorized_data = {}
     for col in data.columns:
-        column_data = data[col]
-        normed_data = normalize_text(column_data)
+        column_data = data[col].apply(str)
+        normed_data = normalize_text(column_data, language_model)
         vectorized_data[col] = vectorizer.transform(normed_data)
 
     return vectorized_data
@@ -179,7 +181,10 @@ def save_subset(data, selection):
     pass
 
 if __name__ == '__main__':
-    data = load_data('test_data.csv')
+    # Dutch language model (has to be installed separately on CLI, see line 7)
+    language_model = spacy.load('nl_core_news_sm')
+
+    data = load_data('test_data.csv', columns=['type','title','abstract'])
 
     test_queries = ['(abstract:zalm AND (abstract:evi OR (NOT type:help)))',
                     '((abstract:evi OR (NOT type:help)) AND abstract:zalm)',
@@ -193,4 +198,4 @@ if __name__ == '__main__':
     test_vocabs = [get_vocabulary(x) for x in test_trees]
     test_vects = [get_vectorizer(x) for x in test_vocabs]
     tested_data = vectorize_data(data, test_vects[0])
-    print('done')
+    print(tested_data)
