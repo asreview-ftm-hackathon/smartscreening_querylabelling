@@ -107,8 +107,10 @@ def normalize_text(text_vector, language_model):
 
 
 def get_vocabulary(query, language_model):
-    """ This function extracts the leaf nodes from the search query into
-    ...........""" # TODO document
+    """This function extracts the search terms (leaf nodes) from the parsed
+    query, and constructs the vocabulary for the text vectorizer object by
+    applying text normalization to them.
+    """
     def _getleafnodes(query):
         terms = []
         if query.isLeaf():
@@ -195,7 +197,7 @@ if __name__ == '__main__':
                     '(abstract:42222*& OR type:life)'
                     ]
     test_trees = [parse_query(x) for x in test_queries]
-    test_vocabs = [get_vocabulary(x) for x in test_trees]
+    test_vocabs = [get_vocabulary(x, language_model) for x in test_trees]
     test_vects = [get_vectorizer(x) for x in test_vocabs]
     tested_data = vectorize_data(data, test_vects[0])
     print(tested_data)
