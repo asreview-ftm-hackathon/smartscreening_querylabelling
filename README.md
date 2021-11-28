@@ -25,7 +25,7 @@ For example, if you want
 Written by Matthew van der Meer and Evi Hendrikx as an assignment in the Hackaton ASReview for Follow the Money.
 
 ## License
-MIT
+The content in this repository is published under the MIT license.
 
 ## Contact
 For any questions or remarks, please send an email to e.h.h.hendrikx@uu.nl or matthew.vdmeer@gmail.com 
