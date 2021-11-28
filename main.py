@@ -27,7 +27,52 @@ def parse_query(raw_query):
     leaf node is a search term and internal nodes represent boolean
     operators.
     """
-    parsed_query = None
+
+    if not (raw_query.count("(") == raw_query.count(")") and raw_query.count("(") == raw_query.count("AND") + raw_query.count("OR") + raw_query.count("NOT")):
+        raise ValueError('Unmatched brackets or operators')
+    #TODO hier kunnen nog een heleboel andere dingen misgaan, dan krijg je gewoon een gekke boom
+
+    raw_query = raw_query.replace("(", "}(}").replace(")", "})}").replace("AND", "}AND}").replace("OR", "}OR}").replace("NOT", "}NOT}")
+    split_query = raw_query.split("}")
+    query_list = [x for x in split_query if x != '' and x != ' ']
+
+    qStack = Stack()
+    parsed_query = BinaryTree('')
+    qStack.push(parsed_query)
+    currentTree = parsed_query
+
+    # if no boolean operations are given, the list only contains brackets and the key word
+    if len(query_list) == 1:
+        currentTree.setRootVal(query_list[0])
+
+    else:
+
+        for q in query_list:
+            if q == '(':
+                currentTree.insertLeft('')
+                qStack.push(currentTree)
+                currentTree = currentTree.getLeftChild()
+
+            elif q in ['AND', 'OR']:
+                currentTree.setRootVal(q)
+                currentTree.insertRight('')
+                qStack.push(currentTree)
+                currentTree = currentTree.getRightChild()
+
+            elif q == 'NOT':
+                currentTree = qStack.pop()
+                currentTree.setRootVal(q)
+                qStack.push(currentTree)
+                currentTree = currentTree.getLeftChild()
+
+            elif q == ')':
+                currentTree = qStack.pop()
+
+            elif q not in ['AND', 'OR', 'NOT', ')']:
+                currentTree.setRootVal(q)
+                parent = qStack.pop()
+                currentTree = parent
+
     return parsed_query
 
 def normalize_text(text_vector):
@@ -42,10 +87,22 @@ def normalize_text(text_vector):
 
     return normed_text_vector
 
+
 def get_vocabulary(query):
-    """ ."""
+    """ This function extracts the leaf nodes from the search query into
+    ..........."""
+
     # extract terms from the leaf nodes of the query object.
-    terms = None #TODO:
+    terms = []
+    if query.getLeftChild() is None and query.getRightChild() is None:
+        terms.append(query.getRootVal())
+    if query.getLeftChild():
+        terms.append(get_vocabulary(query.getLeftChild()))
+    if query.getRightChild():
+        terms.append(get_vocabulary(query.getRightChild()))
+
+    #TODO: dit is wat  ik nu heb, column names moeten nog geschrapt worden dan I guess
+    # ik weet niet zo goed waarom deze nodig is help
 
 
     normed_terms = normalize_text(terms)
@@ -80,4 +137,4 @@ def save_subset(data, selection):
     pass
 
 if __name__ == '__main__':
-    data = load_data('test_data.csv')
+    data = load_data('C:/Users/Hendr076/FTM_hackathon/smartscreening_FUNnelyourdata_TheFUNnel/test_data.csv')
