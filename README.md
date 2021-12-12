@@ -17,7 +17,7 @@ In order for ASReview to adequately address some of these problems, **we believe
 
 One possibility is to allow the user to label subsets of the data based on a particular search query. 
 Maybe the user knows that any document that contains 'John' in the title, or 'environmental pollution' in the body is relevant.
-In that case, having functionality within ASReview to label all documents which match a query like (title:John OR body:environmental pollution) as 'relevant' can speed up the screening process significantly.
+In that case, having functionality within ASReview to label all documents which match a query like `(title:John OR body:environmental pollution)` as 'relevant' can speed up the screening process significantly.
 
 **As a first step towards this kind of functionality, we developed a script which updates the labels of a tabular collection of documents (.csv/.xlsx) based on a search query combining boolean operations.**
 
