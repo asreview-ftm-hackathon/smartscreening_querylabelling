@@ -83,6 +83,9 @@ We aimed at keeping the code as general as possible, to make copying the functio
 > Documents with`D` or `E` in the title: `(title:D OR title:E)`
 
 
+**Performance**
+> Running on 2x ~3.3Ghz CPU cores, the script currently takes ~6.5min for the query `(type:mail AND (date:2018 AND abstract:gaswinning))` on the `type,date,title,abstract` columns of the hackathon's `preprocessed_data.xlsx` (~2500 documents).
+
 ## Authors 
 Written by Matthew van der Meer and Evi Hendrikx for the Follow The Money ASReview Hackathon 2021.
 
