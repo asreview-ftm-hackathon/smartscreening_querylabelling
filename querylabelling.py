@@ -410,15 +410,18 @@ if __name__ == '__main__':
     filepath = input('what is the filepath to your dataset? (e.g data.csv)\n'
                      'The script handles csv or excel files.\n')
 
+    columns = input('Which columns do you want to load?\n'
+                    'Separate by comma (e.g. title,abstract)\n'
+                    'If data is already labeled, make sure to add the column'
+                    " 'label_included'\n").split(',')
+
     raw_query = input('What is your query? See README for details.\n')
 
     label = input("What label do you want to apply to the subset? "
                   "  include/exclude/unlabelled\n")
 
     # load data
-    data = load_data(filepath, columns=['title',
-                                        'abstract',
-                                        'label_included'])
+    data = load_data(filepath, columns=columns)
 
     # parse the query
     query_tree = parse_query(raw_query, lang_model)
