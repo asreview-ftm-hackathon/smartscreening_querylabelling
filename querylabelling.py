@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 import spacy
 import re
+import time
 from sklearn.feature_extraction.text import CountVectorizer
 from pythonds.basic import Stack
 from pythonds.trees import BinaryTree
@@ -410,6 +411,9 @@ if __name__ == '__main__':
     filepath = input('what is the filepath to your dataset? (e.g data.csv)\n'
                      'The script handles csv or excel files.\n')
 
+    file_type = filepath.split('.')[-1]
+    file_name = filepath[:-(len(file_type)+1)]
+
     columns = input('Which columns do you want to load?\n'
                     'Separate by comma (e.g. title,abstract)\n'
                     'If data is already labeled, make sure to add the column'
@@ -419,6 +423,8 @@ if __name__ == '__main__':
 
     label = input("What label do you want to apply to the subset? "
                   "  include/exclude/unlabelled\n")
+
+    start_time = time.time()
 
     # load data
     data = load_data(filepath, columns=columns)
@@ -440,7 +446,13 @@ if __name__ == '__main__':
 
     labeled_data = label_subset(data,selection,label)
 
-    labeled_data.to_csv('labeled_' + filepath,
+    labeled_data.to_csv(file_name
+                        + '_labelled.'
+                        + 'csv',
                         index=False,
                         encoding='utf-8',
                         sep=';')
+    end_time = time.time()
+    print(f'Finished, saved as {file_name+"_labelled."+"csv"}.')
+    print('Time taken:')
+    print("--- %s seconds ---" % (end_time - start_time))
